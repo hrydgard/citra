@@ -14,8 +14,10 @@
 
 // Include the implementation of the UI in this file. This isn't in microprofile.cpp because the
 // non-Qt frontends don't need it (and don't implement the UI drawing hooks either).
+#if MICROPROFILE_ENABLED
 #define MICROPROFILEUI_IMPL 1
 #include "common/microprofileui.h"
+#endif
 
 using namespace Common::Profiling;
 

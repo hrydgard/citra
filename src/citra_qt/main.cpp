@@ -12,6 +12,8 @@
 #include <QMessageBox>
 #include "qhexedit.h"
 
+#include "common/microprofile.h"
+
 #include "citra_qt/bootmanager.h"
 #include "citra_qt/config.h"
 #include "citra_qt/configure_dialog.h"
@@ -33,7 +35,6 @@
 #include "citra_qt/debugger/ramview.h"
 #include "citra_qt/debugger/registers.h"
 
-#include "common/microprofile.h"
 #include "common/platform.h"
 #include "common/scm_rev.h"
 #include "common/scope_exit.h"
