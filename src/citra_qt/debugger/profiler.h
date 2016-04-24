@@ -49,6 +49,9 @@ private:
     QTimer update_timer;
 };
 
+
+#if MICROPROFILE_ENABLED
+
 class MicroProfileDialog : public QWidget {
     Q_OBJECT
 
@@ -65,3 +68,5 @@ protected:
 private:
     QAction* toggle_view_action = nullptr;
 };
+
+#endif

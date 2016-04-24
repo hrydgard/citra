@@ -148,6 +148,9 @@ void ProfilerWidget::setProfilingInfoUpdateEnabled(bool enable)
     }
 }
 
+
+#if MICROPROFILE_ENABLED
+
 class MicroProfileWidget : public QWidget {
 public:
     MicroProfileWidget(QWidget* parent = nullptr);
@@ -337,3 +340,5 @@ void MicroProfileDrawLine2D(u32 vertices_length, float* vertices, u32 hex_color)
     mp_painter->drawPolyline(point_buf.data(), vertices_length);
     point_buf.clear();
 }
+
+#endif MICROPROFILE_ENABLED

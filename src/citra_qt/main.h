@@ -16,7 +16,9 @@ class GImageInfo;
 class GRenderWindow;
 class EmuThread;
 class ProfilerWidget;
+#if MICROPROFILE_ENABLED
 class MicroProfileDialog;
+#endif
 class DisassemblerWidget;
 class RegistersWidget;
 class CallstackWidget;
@@ -122,7 +124,9 @@ private:
     std::unique_ptr<EmuThread> emu_thread;
 
     ProfilerWidget* profilerWidget;
+#if MICROPROFILE_ENABLED
     MicroProfileDialog* microProfileDialog;
+#endif
     DisassemblerWidget* disasmWidget;
     RegistersWidget* registersWidget;
     CallstackWidget* callstackWidget;
