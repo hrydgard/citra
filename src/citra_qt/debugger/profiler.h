@@ -8,8 +8,9 @@
 #include <QDockWidget>
 #include <QTimer>
 
-#include "common/microprofile.h"
 #include "ui_profiler.h"
+
+#include "common/microprofile.h"
 #include "common/profiler_reporting.h"
 
 class ProfilerModel : public QAbstractItemModel

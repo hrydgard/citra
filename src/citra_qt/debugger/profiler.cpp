@@ -6,10 +6,10 @@
 #include <QPainter>
 #include <QString>
 
-#include "common/microprofile.h"
 #include "citra_qt/debugger/profiler.h"
 #include "citra_qt/util/util.h"
 
+#include "common/microprofile.h"
 #include "common/profiler_reporting.h"
 
 // Include the implementation of the UI in this file. This isn't in microprofile.cpp because the
