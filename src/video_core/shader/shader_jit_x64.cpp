@@ -581,7 +581,6 @@ void JitShader::Compile_NOP(Instruction instr) {
 }
 
 void JitShader::Compile_END(Instruction instr) {
-    ABI_PopRegistersAndAdjustStack(ABI_ALL_CALLEE_SAVED, 8);
     RET();
 }
 
@@ -825,7 +824,7 @@ void JitShader::Compile() {
     // The stack pointer is 8 modulo 16 at the entry of a procedure
     ABI_PushRegistersAndAdjustStack(ABI_ALL_CALLEE_SAVED, 8);
 
-    // Load inputs
+    // Prologue: Scatter inputs into registers according to map
     MOV(PTRBITS, R(REGISTERS), R(ABI_PARAM1));
     MOV(PTRBITS, R(INPUT), R(ABI_PARAM2));
     for (int i = 0; i < num_attributes; i++) {
@@ -849,9 +848,12 @@ void JitShader::Compile() {
     static const __m128 neg = { -0.f, -0.f, -0.f, -0.f };
     MOV(PTRBITS, R(RAX), ImmPtr(&neg));
     MOVAPS(NEGBIT, MatR(RAX));
+    // Call the start of the shader program.
+    CALLptr(R(ABI_PARAM3));
+    // Alright, back from the program. Now we can do the epilogue.
 
-    // Jump to start of the shader program
-    JMPptr(R(ABI_PARAM3));
+    ABI_PopRegistersAndAdjustStack(ABI_ALL_CALLEE_SAVED, 8);
+    RET();
 
     // Compile entire program
     Compile_Block(static_cast<unsigned>(g_state.vs.program_code.size()));

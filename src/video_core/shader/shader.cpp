@@ -40,7 +40,8 @@ void Setup() {
         u64 cache_key =
             Common::ComputeHash64(&g_state.vs.program_code, sizeof(g_state.vs.program_code)) ^
             Common::ComputeHash64(&g_state.vs.swizzle_data, sizeof(g_state.vs.swizzle_data)) ^
-            Common::ComputeHash64(&attribute_register_map, sizeof(attribute_register_map));
+            Common::ComputeHash64(&attribute_register_map, sizeof(attribute_register_map)) ^
+            Common::ComputeHash64(&g_state.regs.vs_output_attributes, sizeof(g_state.regs.vs_output_attributes));
 
         auto iter = shader_map.find(cache_key);
         if (iter != shader_map.end()) {
@@ -64,25 +65,25 @@ void Shutdown() {
 MICROPROFILE_DEFINE(GPU_VertexShader, "GPU", "Vertex Shader", MP_RGB(50, 50, 240));
 
 OutputVertex Run(UnitState<false>& state, const InputVertex& input, int num_attributes) {
-    auto& config = g_state.regs.vs;
-
     MICROPROFILE_SCOPE(GPU_VertexShader);
 
-    state.program_counter = config.main_offset;
     state.debug.max_offset = 0;
     state.debug.max_opdesc_id = 0;
 
-    // Setup input register table
-
-    state.conditional_code[0] = false;
-    state.conditional_code[1] = false;
+    // Setup output data
+    OutputVertex ret;
 
 #ifdef ARCHITECTURE_x86_64
     if (VideoCore::g_shader_jit_enabled) {
-        jit_shader->Run(&state.registers, &input.attr[0], g_state.regs.vs.main_offset);
+        jit_shader->Run(&state.registers, &input.attr[0], g_state.regs.vs.main_offset, &ret);
     } else
 #endif // ARCHITECTURE_x86_64
     {
+        auto& config = g_state.regs.vs;
+        // Setup input register table
+        state.program_counter = config.main_offset;
+        state.conditional_code[0] = false;
+        state.conditional_code[1] = false;
         const auto& attribute_register_map = config.input_register_map;
         // TODO: Instead of this cumbersome logic, just load the input data directly like
         // for (int attr = 0; attr < num_attributes; ++attr) { input_attr[0] = state.registers.input[attribute_register_map.attribute0_register]; }
@@ -106,13 +107,10 @@ OutputVertex Run(UnitState<false>& state, const InputVertex& input, int num_attr
         RunInterpreter(state);
     }
 
-    // Setup output data
-    OutputVertex ret;
     // TODO(neobrain): Under some circumstances, up to 16 attributes may be output. We need to
     // figure out what those circumstances are and enable the remaining outputs then.
     unsigned index = 0;
     for (unsigned i = 0; i < 7; ++i) {
-
         if (index >= g_state.regs.vs_output_total)
             break;
 
