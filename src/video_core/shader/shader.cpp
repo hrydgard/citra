@@ -67,9 +67,6 @@ MICROPROFILE_DEFINE(GPU_VertexShader, "GPU", "Vertex Shader", MP_RGB(50, 50, 240
 OutputVertex Run(UnitState<false>& state, const InputVertex& input, int num_attributes) {
     MICROPROFILE_SCOPE(GPU_VertexShader);
 
-    state.debug.max_offset = 0;
-    state.debug.max_opdesc_id = 0;
-
     // Setup output data
     OutputVertex ret;
 
@@ -79,6 +76,9 @@ OutputVertex Run(UnitState<false>& state, const InputVertex& input, int num_attr
     } else
 #endif // ARCHITECTURE_x86_64
     {
+        state.debug.max_offset = 0;
+        state.debug.max_opdesc_id = 0;
+
         auto& config = g_state.regs.vs;
         // Setup input register table
         state.program_counter = config.main_offset;
@@ -105,43 +105,43 @@ OutputVertex Run(UnitState<false>& state, const InputVertex& input, int num_attr
         if (num_attributes > 15) state.registers.input[attribute_register_map.attribute15_register] = input.attr[15];
 
         RunInterpreter(state);
-    }
 
-    // TODO(neobrain): Under some circumstances, up to 16 attributes may be output. We need to
-    // figure out what those circumstances are and enable the remaining outputs then.
-    unsigned index = 0;
-    for (unsigned i = 0; i < 7; ++i) {
-        if (index >= g_state.regs.vs_output_total)
-            break;
+        // TODO(neobrain): Under some circumstances, up to 16 attributes may be output. We need to
+        // figure out what those circumstances are and enable the remaining outputs then.
+        unsigned index = 0;
+        for (unsigned i = 0; i < 7; ++i) {
+            if (index >= g_state.regs.vs_output_total)
+                break;
 
-        if ((g_state.regs.vs.output_mask & (1 << i)) == 0)
-            continue;
+            if ((g_state.regs.vs.output_mask & (1 << i)) == 0)
+                continue;
 
-        const auto& output_register_map = g_state.regs.vs_output_attributes[index]; // TODO: Don't hardcode VS here
+            const auto& output_register_map = g_state.regs.vs_output_attributes[index]; // TODO: Don't hardcode VS here
 
-        u32 semantics[4] = {
-            output_register_map.map_x, output_register_map.map_y,
-            output_register_map.map_z, output_register_map.map_w
-        };
+            u32 semantics[4] = {
+                output_register_map.map_x, output_register_map.map_y,
+                output_register_map.map_z, output_register_map.map_w
+            };
 
-        for (unsigned comp = 0; comp < 4; ++comp) {
-            float24* out = ((float24*)&ret) + semantics[comp];
-            if (semantics[comp] != Regs::VSOutputAttributes::INVALID) {
-                *out = state.registers.output[i][comp];
-            } else {
-                // Zero output so that attributes which aren't output won't have denormals in them,
-                // which would slow us down later.
-                memset(out, 0, sizeof(*out));
+            for (unsigned comp = 0; comp < 4; ++comp) {
+                float24* out = ((float24*)&ret) + semantics[comp];
+                if (semantics[comp] != Regs::VSOutputAttributes::INVALID) {
+                    *out = state.registers.output[i][comp];
+                } else {
+                    // Zero output so that attributes which aren't output won't have denormals in them,
+                    // which would slow us down later.
+                    memset(out, 0, sizeof(*out));
+                }
             }
+
+            index++;
         }
 
-        index++;
-    }
-
-    // The hardware takes the absolute and saturates vertex colors like this, *before* doing interpolation
-    for (unsigned i = 0; i < 4; ++i) {
-        ret.color[i] = float24::FromFloat32(
-            std::fmin(std::fabs(ret.color[i].ToFloat32()), 1.0f));
+        // The hardware takes the absolute and saturates vertex colors like this, *before* doing interpolation
+        for (unsigned i = 0; i < 4; ++i) {
+            ret.color[i] = float24::FromFloat32(
+                std::fmin(std::fabs(ret.color[i].ToFloat32()), 1.0f));
+        }
     }
 
     LOG_TRACE(HW_GPU, "Output vertex: pos(%.2f, %.2f, %.2f, %.2f), quat(%.2f, %.2f, %.2f, %.2f), "
