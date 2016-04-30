@@ -110,6 +110,8 @@ static const X64Reg COND0 = R13;
 static const X64Reg COND1 = R14;
 /// Pointer to the UnitState instance for the current VS unit
 static const X64Reg REGISTERS = R15;
+/// Pointer to the input data. Aliased over LOOPCOUNT as this is before any loops execute.
+static const X64Reg INPUT = RSI;
 /// SIMD scratch register
 static const X64Reg SCRATCH = XMM0;
 /// Loaded with the first swizzled source register, otherwise can be used as a scratch register
@@ -805,6 +807,11 @@ void JitShader::FindReturnOffsets() {
 }
 
 void JitShader::Compile() {
+    auto& config = g_state.regs.vs;
+    const auto& attribute_register_map = config.input_register_map;
+    const auto& attribute_config = g_state.regs.vertex_attributes;
+    int num_attributes = attribute_config.GetNumTotalAttributes();
+
     // Reset flow control state
     program = (CompiledShader*)GetCodePtr();
     program_counter = 0;
@@ -818,7 +825,14 @@ void JitShader::Compile() {
     // The stack pointer is 8 modulo 16 at the entry of a procedure
     ABI_PushRegistersAndAdjustStack(ABI_ALL_CALLEE_SAVED, 8);
 
+    // Load inputs
     MOV(PTRBITS, R(REGISTERS), R(ABI_PARAM1));
+    MOV(PTRBITS, R(INPUT), R(ABI_PARAM2));
+    for (int i = 0; i < num_attributes; i++) {
+        MOVAPS(SCRATCH, MDisp(INPUT, i * 16));
+        MOVAPS(MDisp(REGISTERS, attribute_register_map.GetRegisterForAttribute(i) * 16), SCRATCH);
+    }
+
     MOV(PTRBITS, R(UNIFORMS), ImmPtr(&g_state.vs.uniforms));
 
     // Zero address/loop  registers
@@ -837,7 +851,7 @@ void JitShader::Compile() {
     MOVAPS(NEGBIT, MatR(RAX));
 
     // Jump to start of the shader program
-    JMPptr(R(ABI_PARAM2));
+    JMPptr(R(ABI_PARAM3));
 
     // Compile entire program
     Compile_Block(static_cast<unsigned>(g_state.vs.program_code.size()));
